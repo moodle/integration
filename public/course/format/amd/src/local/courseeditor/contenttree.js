@@ -85,6 +85,19 @@ export default class extends Tree {
     }
 
     /**
+     * Remove the tree descendants from the tab order.
+     *
+     * The core/tree library sets tabindex="-1" on every descendant. That makes presentational images, like
+     * the activity icons, focusable and breaks the axe "presentation-role-conflict" rule.
+     *
+     * @param {JQuery} node the tree node
+     */
+    removeAllFromTabOrder(node) {
+        super.removeAllFromTabOrder(node);
+        this.treeRoot.find('img[alt=""]').removeAttr('tabindex');
+    }
+
+    /**
      * Handle enter key on a collpasible node.
      *
      * @param {JQuery} jQueryItem the jQuery object
