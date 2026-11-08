@@ -94,8 +94,9 @@ export default class extends Tree {
         if (this.isGroupItem(jQueryItem)) {
             // Group elements is like clicking a topic but without loosing the focus.
             const enter = item.querySelector(this.selectors.ENTER);
-            if (enter.getAttribute('href') !== '#') {
-                window.location.href = enter.getAttribute('href');
+            const href = enter.getAttribute('href');
+            if (href && href !== '#') {
+                window.location.href = href;
             }
             enter.click();
         } else {
@@ -125,7 +126,8 @@ export default class extends Tree {
         }
         // This is a title or activity name click.
         jQueryItem.focus();
-        if (this.isGroupItem(jQueryItem)) {
+        // Titles with a link navigate. Only a toggler title (without a link) expands the group.
+        if (this.isGroupItem(jQueryItem) && event.target.closest(this.selectors.TOGGLER)) {
             this.expandGroup(jQueryItem);
         }
     }

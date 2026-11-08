@@ -1,0 +1,10 @@
+issueNumber: MDL-87829
+notes:
+  core_courseformat:
+    - message: >-
+        In the course index, clicking a section name now navigates to the
+        section and no longer expands it. Only the chevron expands or collapses
+        a section (a section name without a link still expands it). The
+        `data-action="togglecourseindexsection"` attribute is no longer set on
+        section name links, and pressing Enter on a section no longer expands it.
+      type: changed
