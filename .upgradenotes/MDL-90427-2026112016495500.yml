@@ -1,0 +1,10 @@
+issueNumber: MDL-90427
+notes:
+  mod_forum:
+    - message: >-
+        Added the REST API route `PATCH /api/rest/v2/mod_forum/discussions/{discussionId}`
+        with the body `{"read": true}` to mark all unread posts of a discussion as read
+        for the current user in both automatic and manual read-tracking modes.
+        The route is protected by the new `mod_forum:discussion:read` and
+        `mod_forum:discussion:write` scopes.
+      type: improved
