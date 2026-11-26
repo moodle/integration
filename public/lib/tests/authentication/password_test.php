@@ -232,6 +232,20 @@ final class password_test extends \advanced_testcase {
         $service->hash($password);
     }
 
+    public function test_hash_exceeding_length_uses_error_code(): void {
+        $service = $this->get_service();
+
+        $password = str_repeat('a', MAX_PASSWORD_CHARACTERS + 1);
+
+        try {
+            $service->hash($password);
+            $this->fail('Expected moodle_exception was not thrown');
+        } catch (moodle_exception $e) {
+            $this->assertEquals('passwordexceeded', $e->errorcode);
+            $this->assertEquals('error', $e->module);
+        }
+    }
+
     public function test_hash_verifiable_with_crypt(): void {
         $service = $this->get_service();
 
@@ -456,6 +470,23 @@ final class password_test extends \advanced_testcase {
         // The database should have the updated hash.
         $dbhash = $DB->get_field('user', 'password', ['id' => $user->id]);
         $this->assertEquals($user->password, $dbhash);
+        $this->assertTrue($service->validate($user, $password));
+    }
+
+    public function test_update_with_pepper_at_max_length(): void {
+        global $CFG;
+        $this->resetAfterTest();
+
+        $CFG->passwordpeppers = [
+            1 => '#GV]NLie|x$H9[$rW%94bXZvJHa%z',
+        ];
+        $service = $this->get_service();
+        $password = str_repeat('a', MAX_PASSWORD_CHARACTERS);
+        $user = $this->getDataGenerator()->create_user(['auth' => 'manual']);
+
+        // The pepper must not count towards the maximum password length.
+        $service->update($user, $password);
+
         $this->assertTrue($service->validate($user, $password));
     }
 
