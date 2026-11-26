@@ -138,7 +138,7 @@ class password {
         int $pepperlength = 0,
     ): string {
         if ($this->exceeds_max_length($password, $pepperlength)) {
-            throw new moodle_exception(get_string('passwordexceeded', 'error', MAX_PASSWORD_CHARACTERS));
+            throw new moodle_exception('passwordexceeded', 'error', '', MAX_PASSWORD_CHARACTERS);
         }
 
         // Set the cost factor to 5000 for fast hashing, otherwise use default cost.
@@ -188,8 +188,11 @@ class password {
 
         // Add the latest password pepper to the password before further processing.
         $peppers = $this->get_peppers();
+        $pepperlength = 0;
         if (!empty($peppers)) {
-            $password = $password . reset($peppers);
+            $pepper = reset($peppers);
+            $password = $password . $pepper;
+            $pepperlength = strlen($pepper);
         }
 
         // Figure out what the hashed password should be.
@@ -204,7 +207,7 @@ class password {
         if ($authplugin->prevent_local_passwords()) {
             $hashedpassword = AUTH_PASSWORD_NOT_CACHED;
         } else {
-            $hashedpassword = $this->hash($password, $fasthash);
+            $hashedpassword = $this->hash($password, $fasthash, $pepperlength);
         }
 
         $algorithmchanged = false;
