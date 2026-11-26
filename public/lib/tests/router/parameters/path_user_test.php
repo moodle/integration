@@ -113,6 +113,33 @@ final class path_user_test extends route_testcase {
         $this->assertEquals($context->id, $newrequest->getAttribute('usercontext')->id);
     }
 
+    public function test_multiple_users_with_same_idnumber(): void {
+        $this->resetAfterTest();
+
+        $idnumber = '000117-user';
+        $user = $this->getDataGenerator()->create_user((object) [
+            'idnumber' => $idnumber,
+        ]);
+        $user = $this->getDataGenerator()->create_user((object) [
+            'idnumber' => $idnumber,
+        ]);
+
+        $param = new path_user();
+
+        $request = new ServerRequest('GET', '/user');
+
+        $errorlog = make_request_directory() . '/errorlog.txt';
+        $original = ini_set('error_log', $errorlog);
+        try {
+            $param->add_attributes_for_parameter_value($request, "idnumber:{$idnumber}");
+        } catch (\Exception $e) {
+            $this->assertMatchesRegularExpression('/Multiple users found with idnumber: /', file_get_contents($errorlog));
+            $this->assertInstanceOf(not_found_exception::class, $e);
+        } finally {
+            ini_set('error_log', $original);
+        }
+    }
+
     public function test_username(): void {
         $this->resetAfterTest();
 
@@ -130,6 +157,50 @@ final class path_user_test extends route_testcase {
 
         $this->assertEquals($user->id, $newrequest->getAttribute('user')->id);
         $this->assertEquals($context->id, $newrequest->getAttribute('usercontext')->id);
+    }
+
+    /**
+     * Deleted users cannot be resolved by any supported identifier.
+     *
+     * @param string $identifier
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('deleted_user_identifier_provider')]
+    public function test_deleted_user_not_found(string $identifier): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user([
+            'deleted' => 1,
+            'idnumber' => 'deleted-user-idnumber',
+            'username' => 'deleted-user',
+        ]);
+        if ($identifier === 'current') {
+            $this->setUser($user);
+        }
+        $value = match ($identifier) {
+            'current' => 'current',
+            'id' => (string) $user->id,
+            'idnumber' => "idnumber:{$user->idnumber}",
+            'username' => "username:{$user->username}",
+        };
+
+        $this->expectException(not_found_exception::class);
+        (new path_user())->add_attributes_for_parameter_value(
+            new ServerRequest('GET', '/user'),
+            $value,
+        );
+    }
+
+    /**
+     * Data provider for deleted user identifiers.
+     *
+     * @return array
+     */
+    public static function deleted_user_identifier_provider(): array {
+        return [
+            'current' => ['current'],
+            'id' => ['id'],
+            'idnumber' => ['idnumber'],
+            'username' => ['username'],
+        ];
     }
 
     public function test_validation(): void {

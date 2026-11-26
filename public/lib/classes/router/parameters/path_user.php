@@ -29,7 +29,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * @package    core
  * @copyright  Andrew Lyons <andrew@nicols.co.uk>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class path_user extends \core\router\schema\parameters\path_parameter implements
     mapped_property_parameter,
@@ -52,11 +52,13 @@ class path_user extends \core\router\schema\parameters\path_parameter implements
 
         This can be the magic string 'current', or the user's id, idnumber, or username.
 
-        If specifying an id, the value should be in the format `id:[id]`.
+        If specifying an id, the value should be in the format `[id]`.
 
         If specifying an idnumber, the value should be in the format `idnumber:[idnumber]`.
 
         If specifying a username, the value should be in the format `username:[username]`.
+
+        Deleted users are treated as not found.
         EOF;
         $extra['examples'] = [
             new example(
@@ -85,27 +87,58 @@ class path_user extends \core\router\schema\parameters\path_parameter implements
      *
      * @param string $value A user id, idnumber, or username
      * @return object
-     * @throws not_found_exception If the user cannot be found
+     * @throws not_found_exception If the user cannot be found or has been deleted
      */
     protected function get_user_for_value(string $value): mixed {
-        global $USER;
-
-        if ($value === 'current') {
-            // The anonymous session user has no database record.
-            return $USER->id ? user::get_user($USER->id) : $USER;
-        }
+        global $CFG;
 
         $data = null;
-        if (is_numeric($value)) {
+        if ($value === 'current') {
+            $user = \core\di::get(\core\current_user::class);
+            // The anonymous session user has no database record.
+            $data = $user->get_id() ? user::get_user($user->get_id()) : $user->get_user_object();
+        } else if (is_numeric($value)) {
             $data = user::get_user($value);
         } else if (str_starts_with($value, 'idnumber:')) {
-            $data = user::get_user_by_idnumber(substr($value, strlen('idnumber:')));
+            $idnumber = substr($value, strlen('idnumber:'));
+
+            if (empty($idnumber)) {
+                throw new not_found_exception('user', $value);
+            }
+
+            // Unfortunately there is a bug that allows multiple users to have the same idnumber in Moodle.
+            // We fetch all users here for now until MDL-90363 is resolved.
+
+            // Because we use the username as the search criteria, we must also restrict our search based on mnet host.
+            $users = \core\di::get(\core\dml\database_proxy::class)
+                ->get_records('user', [
+                    'idnumber' => $idnumber,
+                    'mnethostid' => $CFG->mnet_localhost_id,
+                ]);
+
+            if (count($users) === 1) {
+                $data = reset($users);
+            } else if (count($users) > 1) {
+                // If there are no users, or more than one user with the same idnumber, we cannot determine a unique user.
+                // Act as though no user was found instead.
+                // phpcs:ignore moodle.PHP.ForbiddenFunctions.FoundWithAlternative
+                error_log(
+                    "Multiple users found with idnumber: " . substr($value, strlen('idnumber:'))
+                );
+            }
         } else if (str_starts_with($value, 'username:')) {
-            $data = user::get_user_by_username(substr($value, strlen('username:')));
+            $username = substr($value, strlen('username:'));
+            if (empty($username)) {
+                throw new not_found_exception('user', $value);
+            }
+            $data = user::get_user_by_username($username);
         }
 
-        if ($data) {
+        if ($data && empty($data->deleted)) {
             return $data;
+        }
+        if ($data) {
+            throw new not_found_exception('user', (string) $data->id);
         }
         throw new not_found_exception('user', $value);
     }
