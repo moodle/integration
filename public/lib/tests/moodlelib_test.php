@@ -3008,6 +3008,43 @@ EOF;
     }
 
     /**
+     * Test that hash_internal_user_password() uses the passwordexceeded error code.
+     *
+     * @covers ::hash_internal_user_password
+     */
+    public function test_hash_internal_user_password_exceeding_length_uses_error_code(): void {
+        $password = str_repeat('a', MAX_PASSWORD_CHARACTERS + 1);
+
+        try {
+            hash_internal_user_password($password);
+            $this->fail('Expected moodle_exception was not thrown');
+        } catch (\moodle_exception $e) {
+            $this->assertEquals('passwordexceeded', $e->errorcode);
+            $this->assertEquals('error', $e->module);
+        }
+    }
+
+    /**
+     * Test that the pepper does not count towards the maximum password length.
+     *
+     * @covers ::update_internal_user_password
+     */
+    public function test_update_internal_user_password_with_pepper_at_max_length(): void {
+        global $CFG;
+        $this->resetAfterTest();
+
+        $CFG->passwordpeppers = [
+            1 => '#GV]NLie|x$H9[$rW%94bXZvJHa%z',
+        ];
+        $password = str_repeat('a', MAX_PASSWORD_CHARACTERS);
+        $user = $this->getDataGenerator()->create_user(['auth' => 'manual']);
+
+        update_internal_user_password($user, $password);
+
+        $this->assertTrue(validate_internal_user_password($user, $password));
+    }
+
+    /**
      * Testing that if the password is not cached, that it does not update
      * the user table and fire event.
      *

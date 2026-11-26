@@ -4368,7 +4368,7 @@ function validate_internal_user_password(stdClass $user, #[\SensitiveParameter] 
 function hash_internal_user_password(#[\SensitiveParameter] string $password, $fasthash = false, $pepperlength = 0): string {
     if (exceeds_password_length($password, $pepperlength)) {
         // Password cannot be more than MAX_PASSWORD_CHARACTERS.
-        throw new \moodle_exception(get_string("passwordexceeded", 'error', MAX_PASSWORD_CHARACTERS));
+        throw new \moodle_exception('passwordexceeded', 'error', '', MAX_PASSWORD_CHARACTERS);
     }
 
     // Set the cost factor to 5000 for fast hashing, otherwise use default cost.
@@ -4431,8 +4431,11 @@ function update_internal_user_password(
 
     // Add the latest password pepper to the password before further processing.
     $peppers = get_password_peppers();
+    $pepperlength = 0;
     if (!empty($peppers)) {
-        $password = $password . reset($peppers);
+        $pepper = reset($peppers);
+        $password = $password . $pepper;
+        $pepperlength = strlen($pepper);
     }
 
     // Figure out what the hashed password should be.
@@ -4445,7 +4448,7 @@ function update_internal_user_password(
     if ($authplugin->prevent_local_passwords()) {
         $hashedpassword = AUTH_PASSWORD_NOT_CACHED;
     } else {
-        $hashedpassword = hash_internal_user_password($password, $fasthash);
+        $hashedpassword = hash_internal_user_password($password, $fasthash, $pepperlength);
     }
 
     $algorithmchanged = false;
