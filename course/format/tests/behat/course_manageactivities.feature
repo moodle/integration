@@ -39,6 +39,8 @@ Feature: Verify edit utils availability
     Then I should see "Add an activity or resource"
     And I open "Activity sample 1" actions menu
     And I should see "Edit settings"
+    # Close the activity actions menu, otherwise it overlaps the section actions menu.
+    And I press the escape key
     And ".section_action_menu" "css_element" should exist in the "Section 1" "section"
     And I click on ".section_action_menu" "css_element" in the "Section 1" "section"
     And I should see "Edit settings"
@@ -58,6 +60,9 @@ Feature: Verify edit utils availability
     But I should not see "Add section"
     And I open "Activity sample 1" actions menu
     And I should see "Edit settings"
+    # Close the activity actions menu, otherwise it overlaps the section actions menu and its
+    # own "Edit settings" item would defeat the assertion below.
+    And I press the escape key
     And I open section "1" edit menu
     And I should not see "Edit settings"
     And I should see "View"
@@ -74,6 +79,8 @@ Feature: Verify edit utils availability
     And I should see "Add section"
     And I open "Activity sample 1" actions menu
     And I should see "Edit settings"
+    # Close the activity actions menu, otherwise it overlaps the section actions menu.
+    And I press the escape key
     And ".section_action_menu" "css_element" should exist in the "Section 1" "section"
     And I click on ".section_action_menu" "css_element" in the "Section 1" "section"
     And I should see "Edit settings"
