@@ -84,8 +84,8 @@ abstract class advanced_testcase extends base_testcase {
             $CFG = phpunit_util::get_global_backup('CFG');
             $DB = phpunit_util::get_global_backup('DB');
 
-            // We need to reset the autoloader.
-            \core_component::reset();
+            // Restore the component cache baseline after a test.
+            \core_component::phpunit_reset();
         }
 
         if (isset($e)) {
@@ -803,6 +803,9 @@ abstract class advanced_testcase extends base_testcase {
         $mockedcomponent->setStaticPropertyValue('plugintypes', $plugintypes);
 
         $this->resetDebugging();
+
+        // Reset the plugin manager.
+        \core\plugin_manager::phpunit_reset();
     }
 
     /**
@@ -835,6 +838,9 @@ abstract class advanced_testcase extends base_testcase {
         $plugins[$plugintype][$pluginname] = $path;
         $mockedcomponent->setStaticPropertyValue('plugins', $plugins);
         $this->resetDebugging();
+
+        // Reset the plugin manager.
+        \core\plugin_manager::phpunit_reset();
     }
 
     /**
